@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Fibonacci Visualizer + Calculator</title>
+  <title>Math Assistant – Calculator & Fibonacci Curve</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
@@ -78,12 +78,6 @@
       max-height: 260px;
       overflow: auto;
     }
-    pre {
-      margin: 0;
-      white-space: pre-wrap;
-      word-break: break-word;
-      font-size: 0.8rem;
-    }
     img {
       max-width: 100%;
       border-radius: 10px;
@@ -105,65 +99,54 @@
 </head>
 <body>
 <header>
-  <h1>Fibonacci Spiral Server Demo</h1>
+  <h1>Math Assistant</h1>
   <div style="font-size:0.9rem;opacity:0.9">
-    Java HttpServer · Calculator · Fibonacci Geometry JSON · Spiral Image
+    Basic Calculator (addition, subtraction, multiplication, division) & Fibonacci Curve
   </div>
 </header>
 
 <main>
   <!-- Calculator -->
   <section class="card">
-    <h2>Calculator (/api/calculate)</h2>
+    <h2>Calculator (4 operations)</h2>
     <div class="row">
       <div>
-        <label for="calcA">A</label>
+        <label for="calcA">First number</label>
         <input id="calcA" type="number" value="10">
       </div>
       <div>
-        <label for="calcB">B</label>
+        <label for="calcB">Second number</label>
         <input id="calcB" type="number" value="5">
       </div>
       <div>
         <label for="calcOp">Operation</label>
         <select id="calcOp">
-          <option value="add">A + B</option>
-          <option value="sub">A - B</option>
-          <option value="mul">A × B</option>
-          <option value="div">A ÷ B</option>
+          <option value="add">addition</option>
+          <option value="sub">subtraction</option>
+          <option value="mul">multiplication</option>
+          <option value="div">division</option>
         </select>
       </div>
     </div>
-    <button id="calcBtn">Calculate</button>
+    <button id="calcBtn">Compute</button>
     <div class="result" id="calcResult">
       Result will appear here.
     </div>
   </section>
 
-  <!-- Fibonacci JSON -->
+  <!-- Fibonacci Spiral Image -->
   <section class="card">
-    <h2>Fibonacci Geometry JSON (/api/fibonacci)</h2>
-    <label for="fibTerms">Number of terms (1–40)</label>
-    <input id="fibTerms" type="number" value="8" min="1" max="40">
-    <button id="fibBtn">Fetch Fibonacci geometry</button>
-    <div class="result">
-      <pre id="fibJson">JSON will appear here.</pre>
-    </div>
-  </section>
-
-  <!-- Spiral Image -->
-  <section class="card">
-    <h2>Spiral Image (/api/fibonacci-image)</h2>
-    <label for="imgTerms">Terms</label>
+    <h2>Fibonacci Curve (Spiral)</h2>
+    <label for="imgTerms">Number of terms (1–40)</label>
     <input id="imgTerms" type="number" value="10" min="1" max="40">
     <label for="imgSize">Image size (pixels)</label>
     <input id="imgSize" type="number" value="600" min="200" max="1200">
-    <button id="imgBtn">Load Spiral Image</button>
+    <button id="imgBtn">Generate Fibonacci Curve</button>
     <div class="result" style="background:none;box-shadow:none;padding:0;margin-top:10px;">
       <img id="spiralImg" alt="Fibonacci Spiral" />
     </div>
     <small>
-      Note: On Render, the URL is relative; this HTML is served by the same Java server.
+      This uses the backend endpoint <code>/api/fibonacci-image</code> to render the curve as a PNG image.
     </small>
   </section>
 </main>
@@ -172,6 +155,7 @@
   // All calls use relative URLs so this works on localhost and on Render.
   const base = '';
 
+  // Calculator: POST /api/calculate with a, b, op
   document.getElementById('calcBtn').addEventListener('click', async () => {
     const a = document.getElementById('calcA').value || '0';
     const b = document.getElementById('calcB').value || '0';
@@ -193,6 +177,7 @@
         return;
       }
       const data = await res.json();
+      // Just show the numeric result; no "A + B" formatting
       document.getElementById('calcResult').textContent =
         'Result: ' + data.result;
     } catch (err) {
@@ -201,37 +186,13 @@
     }
   });
 
-  document.getElementById('fibBtn').addEventListener('click', async () => {
-    const terms = document.getElementById('fibTerms').value || '8';
-    const body = new URLSearchParams({ terms }).toString();
-
-    try {
-      const res = await fetch(base + '/api/fibonacci', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
-        },
-        body
-      });
-      if (!res.ok) {
-        document.getElementById('fibJson').textContent =
-          'Error: ' + res.status + ' ' + res.statusText;
-        return;
-      }
-      const data = await res.json();
-      document.getElementById('fibJson').textContent =
-        JSON.stringify(data, null, 2);
-    } catch (err) {
-      document.getElementById('fibJson').textContent =
-        'Network error: ' + err;
-    }
-  });
-
+  // Fibonacci spiral image: GET /api/fibonacci-image?terms=&size=
   document.getElementById('imgBtn').addEventListener('click', () => {
     const terms = document.getElementById('imgTerms').value || '10';
     const size = document.getElementById('imgSize').value || '600';
     const url = `${base}/api/fibonacci-image?terms=${encodeURIComponent(terms)}&size=${encodeURIComponent(size)}`;
     const img = document.getElementById('spiralImg');
+    // cacheBust avoids old image being reused
     img.src = url + '&cacheBust=' + Date.now();
   });
 </script>
