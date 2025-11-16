@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fibonacci Visualizer + Calculator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, #eef2ff, #f5f7ff);
+      margin: 0;
+      padding: 0;
+      color: #1f2933;
+    }
+    header {
+      background: #1d4ed8;
+      color: white;
+      padding: 16px 20px;
+      text-align: center;
+    }
+    main {
+      max-width: 1100px;
+      margin: 20px auto 40px;
+      padding: 0 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(15,23,42,0.08);
+      padding: 16px 18px 18px;
+      flex: 1 1 320px;
+      min-width: 0;
+    }
+    h2 {
+      margin-top: 0;
+      font-size: 1.1rem;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 8px;
+      color: #111827;
+    }
+    label {
+      display: block;
+      margin: 6px 0 2px;
+      font-size: 0.9rem;
+    }
+    input, select, button {
+      font: inherit;
+    }
+    input[type="number"], input[type="text"], select {
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 10px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: none;
+      background: #2563eb;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #1d4ed8;
+    }
+    .result {
+      margin-top: 8px;
+      padding: 8px;
+      border-radius: 6px;
+      background: #eff6ff;
+      font-size: 0.9rem;
+      word-break: break-word;
+      max-height: 260px;
+      overflow: auto;
+    }
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 0.8rem;
+    }
+    img {
+      max-width: 100%;
+      border-radius: 10px;
+      box-shadow: 0 8px 20px rgba(15,23,42,0.18);
+    }
+    .row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .row > div {
+      flex: 1 1 90px;
+    }
+    small {
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Fibonacci Spiral Server Demo</h1>
+  <div style="font-size:0.9rem;opacity:0.9">
+    Java HttpServer · Calculator · Fibonacci Geometry JSON · Spiral Image
+  </div>
+</header>
+
+<main>
+  <!-- Calculator -->
+  <section class="card">
+    <h2>Calculator (/api/calculate)</h2>
+    <div class="row">
+      <div>
+        <label for="calcA">A</label>
+        <input id="calcA" type="number" value="10">
+      </div>
+      <div>
+        <label for="calcB">B</label>
+        <input id="calcB" type="number" value="5">
+      </div>
+      <div>
+        <label for="calcOp">Operation</label>
+        <select id="calcOp">
+          <option value="add">A + B</option>
+          <option value="sub">A - B</option>
+          <option value="mul">A × B</option>
+          <option value="div">A ÷ B</option>
+        </select>
+      </div>
+    </div>
+    <button id="calcBtn">Calculate</button>
+    <div class="result" id="calcResult">
+      Result will appear here.
+    </div>
+  </section>
+
+  <!-- Fibonacci JSON -->
+  <section class="card">
+    <h2>Fibonacci Geometry JSON (/api/fibonacci)</h2>
+    <label for="fibTerms">Number of terms (1–40)</label>
+    <input id="fibTerms" type="number" value="8" min="1" max="40">
+    <button id="fibBtn">Fetch Fibonacci geometry</button>
+    <div class="result">
+      <pre id="fibJson">JSON will appear here.</pre>
+    </div>
+  </section>
+
+  <!-- Spiral Image -->
+  <section class="card">
+    <h2>Spiral Image (/api/fibonacci-image)</h2>
+    <label for="imgTerms">Terms</label>
+    <input id="imgTerms" type="number" value="10" min="1" max="40">
+    <label for="imgSize">Image size (pixels)</label>
+    <input id="imgSize" type="number" value="600" min="200" max="1200">
+    <button id="imgBtn">Load Spiral Image</button>
+    <div class="result" style="background:none;box-shadow:none;padding:0;margin-top:10px;">
+      <img id="spiralImg" alt="Fibonacci Spiral" />
+    </div>
+    <small>
+      Note: On Render, the URL is relative; this HTML is served by the same Java server.
+    </small>
+  </section>
+</main>
+
+<script>
+  // All calls use relative URLs so this works on localhost and on Render.
+  const base = '';
+
+  document.getElementById('calcBtn').addEventListener('click', async () => {
+    const a = document.getElementById('calcA').value || '0';
+    const b = document.getElementById('calcB').value || '0';
+    const op = document.getElementById('calcOp').value;
+
+    const body = new URLSearchParams({ a, b, op }).toString();
+
+    try {
+      const res = await fetch(base + '/api/calculate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+        },
+        body
+      });
+      if (!res.ok) {
+        document.getElementById('calcResult').textContent =
+          'Error: ' + res.status + ' ' + res.statusText;
+        return;
+      }
+      const data = await res.json();
+      document.getElementById('calcResult').textContent =
+        'Result: ' + data.result;
+    } catch (err) {
+      document.getElementById('calcResult').textContent =
+        'Network error: ' + err;
+    }
+  });
+
+  document.getElementById('fibBtn').addEventListener('click', async () => {
+    const terms = document.getElementById('fibTerms').value || '8';
+    const body = new URLSearchParams({ terms }).toString();
+
+    try {
+      const res = await fetch(base + '/api/fibonacci', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+        },
+        body
+      });
+      if (!res.ok) {
+        document.getElementById('fibJson').textContent =
+          'Error: ' + res.status + ' ' + res.statusText;
+        return;
+      }
+      const data = await res.json();
+      document.getElementById('fibJson').textContent =
+        JSON.stringify(data, null, 2);
+    } catch (err) {
+      document.getElementById('fibJson').textContent =
+        'Network error: ' + err;
+    }
+  });
+
+  document.getElementById('imgBtn').addEventListener('click', () => {
+    const terms = document.getElementById('imgTerms').value || '10';
+    const size = document.getElementById('imgSize').value || '600';
+    const url = `${base}/api/fibonacci-image?terms=${encodeURIComponent(terms)}&size=${encodeURIComponent(size)}`;
+    const img = document.getElementById('spiralImg');
+    img.src = url + '&cacheBust=' + Date.now();
+  });
+</script>
+
+</body>
+</html>
