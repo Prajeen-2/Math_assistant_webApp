@@ -15,9 +15,8 @@ import javax.imageio.ImageIO;
 /**
  * FibonacciServer
  * - Serves index.html at "/"
- * - POST /api/calculate  (a,b,op) -> JSON {"result":...}
- * - POST /api/fibonacci  (terms) -> JSON { arcs:[{cx,cy,r,start}], squares:[{x,y,w,h,label}] }
- * - GET  /api/fibonacci-image?terms=&size= -> image/png (scientific graph)
+ * - POST /api/calculate       -> JSON {"result":...}  (add, sub, mul, div)
+ * - GET  /api/fibonacci-image -> image/png (Fibonacci spiral graph)
  * - Proper CORS and OPTIONS support
  * - Uses PORT env var (Render) or defaults to 8080
  */
@@ -54,7 +53,7 @@ public class FibonacciServer {
             }
         });
 
-        // Calculator endpoint (POST)
+        // Calculator endpoint (POST) – 4 operations with two inputs
         server.createContext("/api/calculate", exchange -> {
             try {
                 if (handleOptions(exchange)) return;
@@ -65,15 +64,30 @@ public class FibonacciServer {
                 addCORS(exchange);
                 String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
                 Map<String,String> p = parseForm(body);
-                double a = parseDouble(p.getOrDefault("a","0"));
-                double b = parseDouble(p.getOrDefault("b","0"));
-                String op = p.getOrDefault("op","add");
+
+                double a = parseDouble(p.getOrDefault("a", "0"));
+                double b = parseDouble(p.getOrDefault("b", "0"));
+                String op = p.getOrDefault("op", "add");
+
                 double res;
-                if ("add".equals(op)) res = a + b;
-                else if ("sub".equals(op)) res = a - b;
-                else if ("mul".equals(op)) res = a * b;
-                else if ("div".equals(op)) res = (b == 0 ? Double.NaN : a / b);
-                else res = Double.NaN;
+                switch (op) {
+                    case "add":
+                        res = a + b;
+                        break;
+                    case "sub":
+                        res = a - b;
+                        break;
+                    case "mul":
+                        res = a * b;
+                        break;
+                    case "div":
+                        res = (b == 0 ? Double.NaN : a / b);
+                        break;
+                    default:
+                        res = Double.NaN;
+                }
+
+                // Backend only returns numeric result; frontend decides how to show it
                 sendJSON(exchange, "{\"result\":" + res + "}");
             } catch (Exception e) {
                 e.printStackTrace();
@@ -81,29 +95,7 @@ public class FibonacciServer {
             }
         });
 
-        // Geometry JSON (POST)
-        server.createContext("/api/fibonacci", exchange -> {
-            try {
-                if (handleOptions(exchange)) return;
-                if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
-                    sendText(exchange, 405, "POST only");
-                    return;
-                }
-                addCORS(exchange);
-                String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-                Map<String,String> p = parseForm(body);
-                int terms = parseInt(p.getOrDefault("terms","8"), 8);
-                if (terms < 1) terms = 1;
-                if (terms > 40) terms = 40;
-                String json = generateFibonacciJSON(terms);
-                sendJSON(exchange, json);
-            } catch (Exception e) {
-                e.printStackTrace();
-                sendText(exchange, 500, "Server error");
-            }
-        });
-
-        // Image endpoint (GET) -> PNG with full scientific graph
+        // Image endpoint (GET) -> PNG with full Fibonacci spiral
         server.createContext("/api/fibonacci-image", exchange -> {
             try {
                 if (handleOptions(exchange)) return;
@@ -114,7 +106,10 @@ public class FibonacciServer {
                 addCORS(exchange);
                 Map<String,String> q = parseQuery(exchange.getRequestURI().getQuery());
                 int terms = parseInt(q.getOrDefault("terms","8"), 8);
+                if (terms < 1) terms = 1;
+                if (terms > 40) terms = 40;
                 int size = parseInt(q.getOrDefault("size","600"), 600);
+
                 BufferedImage img = renderFibonacciImage(terms, size, size);
                 exchange.getResponseHeaders().set("Content-Type", "image/png");
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -129,6 +124,9 @@ public class FibonacciServer {
                 sendText(exchange, 500, "Server error");
             }
         });
+
+        // Remove the old /api/fibonacci JSON context – no longer needed
+        // (Do NOT createContext("/api/fibonacci", ...) anymore)
 
         server.setExecutor(null);
         server.start();
@@ -221,37 +219,7 @@ public class FibonacciServer {
     }
 
     // ---------------------
-    // Geometry JSON generator
-    // ---------------------
-
-    private static String generateFibonacciJSON(int terms) {
-        int[] fib = new int[terms + 2];
-        fib[0] = 0; fib[1] = 1;
-        for (int i = 2; i < fib.length; i++) fib[i] = fib[i-1] + fib[i-2];
-
-        List<String> arcs = new ArrayList<>();
-        List<String> squares = new ArrayList<>();
-        double cx = 0, cy = 0, ang = 0;
-        for (int i = 1; i <= terms; i++) {
-            double r = fib[i];
-            arcs.add(String.format(Locale.US,
-                    "{\"cx\":%.6f,\"cy\":%.6f,\"r\":%.6f,\"start\":%.6f}", cx, cy, r, ang));
-            squares.add(String.format(Locale.US,
-                    "{\"x\":%.6f,\"y\":%.6f,\"w\":%.6f,\"h\":%.6f,\"label\":\"%d\"}",
-                    cx - r, cy - r, 2 * r, 2 * r, fib[i]));
-            double end = ang + Math.PI / 2;
-            double ex = cx + r * Math.cos(end);
-            double ey = cy + r * Math.sin(end);
-            cx = ex - fib[i+1] * Math.cos(end);
-            cy = ey - fib[i+1] * Math.sin(end);
-            ang = end;
-        }
-        return "{\"arcs\":[" + String.join(",", arcs) +
-               "],\"squares\":[" + String.join(",", squares) + "]}";
-    }
-
-    // ---------------------
-    // PNG renderer with full scientific graph
+    // Fibonacci spiral PNG renderer (unchanged)
     // ---------------------
 
     private static BufferedImage renderFibonacciImage(int terms, int W, int H) {
@@ -275,7 +243,6 @@ public class FibonacciServer {
         double minX = Double.POSITIVE_INFINITY, maxX = Double.NEGATIVE_INFINITY;
         double minY = Double.POSITIVE_INFINITY, maxY = Double.NEGATIVE_INFINITY;
 
-        // sample points to find bounds
         for (double[] a : arcsList) {
             double acx = a[0], acy = a[1], ar = a[2], st = a[3];
             double en = st + Math.PI / 2;
@@ -289,7 +256,6 @@ public class FibonacciServer {
             }
         }
 
-        // include square bounds
         for (double[] a : arcsList) {
             double acx = a[0], acy = a[1], ar = a[2];
             minX = Math.min(minX, acx - ar);
@@ -315,7 +281,6 @@ public class FibonacciServer {
         Graphics2D g = img.createGraphics();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // background
         GradientPaint sky = new GradientPaint(0, 0, new Color(220,235,255),
                                               0, H/2, new Color(245,250,255));
         g.setPaint(sky);
@@ -324,7 +289,6 @@ public class FibonacciServer {
         g.setColor(new Color(238, 250, 238));
         g.fillRect(0, (int)(H * 0.78), W, (int)(H * 0.22));
 
-        // grid
         g.setStroke(new BasicStroke(1f));
         g.setColor(new Color(230,230,230));
         double approxStepPx = 80;
@@ -343,7 +307,6 @@ public class FibonacciServer {
             g.drawLine(0, py, W, py);
         }
 
-        // axes
         g.setColor(new Color(90,90,90));
         g.setStroke(new BasicStroke(2f));
         int axisX = (int)Math.round(tx + 0 * scale);
@@ -351,7 +314,6 @@ public class FibonacciServer {
         g.drawLine(axisX, 0, axisX, H);
         g.drawLine(0, axisY, W, axisY);
 
-        // tick labels
         g.setFont(new Font("SansSerif", Font.PLAIN, 12));
         g.setColor(new Color(60,60,60));
         for (double gx = gxStart; gx <= maxX; gx += nice) {
@@ -363,7 +325,6 @@ public class FibonacciServer {
             g.drawString(String.format(Locale.US, "%.0f", gy), axisX + 6, py - 2);
         }
 
-        // squares
         g.setStroke(new BasicStroke(1f));
         for (double[] a : arcsList) {
             double acx = a[0], acy = a[1], ar = a[2];
@@ -385,7 +346,6 @@ public class FibonacciServer {
             g.drawString(lbl, txLbl, tyLbl);
         }
 
-        // arcs
         g.setStroke(new BasicStroke(3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
         for (int i = 0; i < arcsList.size(); i++) {
             double[] a = arcsList.get(i);
