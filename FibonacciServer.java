@@ -12,14 +12,7 @@ import java.util.List;
 import java.util.Locale;
 import javax.imageio.ImageIO;
 
-/**
- * FibonacciServer
- * - Serves index.html at "/"
- * - POST /api/calculate       -> JSON {"result":...}  (add, sub, mul, div)
- * - GET  /api/fibonacci-image -> image/png (Fibonacci spiral graph)
- * - Proper CORS and OPTIONS support
- * - Uses PORT env var (Render) or defaults to 8080
- */
+
 public class FibonacciServer {
 
     public static void main(String[] args) throws Exception {
@@ -27,7 +20,6 @@ public class FibonacciServer {
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
         System.out.println("Server running on port: " + port);
 
-        // Serve index.html (GET)
         server.createContext("/", exchange -> {
             try {
                 if (handleOptions(exchange)) return;
@@ -53,7 +45,6 @@ public class FibonacciServer {
             }
         });
 
-        // Calculator endpoint (POST) – 4 operations with two inputs
         server.createContext("/api/calculate", exchange -> {
             try {
                 if (handleOptions(exchange)) return;
@@ -87,7 +78,7 @@ public class FibonacciServer {
                         res = Double.NaN;
                 }
 
-                // Backend only returns numeric result; frontend decides how to show it
+                
                 sendJSON(exchange, "{\"result\":" + res + "}");
             } catch (Exception e) {
                 e.printStackTrace();
@@ -95,7 +86,6 @@ public class FibonacciServer {
             }
         });
 
-        // Image endpoint (GET) -> PNG with full Fibonacci spiral
         server.createContext("/api/fibonacci-image", exchange -> {
             try {
                 if (handleOptions(exchange)) return;
@@ -125,16 +115,13 @@ public class FibonacciServer {
             }
         });
 
-        // Remove the old /api/fibonacci JSON context – no longer needed
-        // (Do NOT createContext("/api/fibonacci", ...) anymore)
+
 
         server.setExecutor(null);
         server.start();
     }
 
-    // ---------------------
-    // Utilities
-    // ---------------------
+
 
     private static boolean handleOptions(HttpExchange ex) throws IOException {
         if ("OPTIONS".equalsIgnoreCase(ex.getRequestMethod())) {
@@ -218,16 +205,14 @@ public class FibonacciServer {
         try { return Integer.parseInt(s); } catch (Exception e) { return def; }
     }
 
-    // ---------------------
-    // Fibonacci spiral PNG renderer (unchanged)
-    // ---------------------
+
 
     private static BufferedImage renderFibonacciImage(int terms, int W, int H) {
         int[] fib = new int[terms + 2];
         fib[0] = 0; fib[1] = 1;
         for (int i = 2; i < fib.length; i++) fib[i] = fib[i-1] + fib[i-2];
 
-        List<double[]> arcsList = new ArrayList<>(); // cx,cy,r,start
+        List<double[]> arcsList = new ArrayList<>(); 
         double cx = 0, cy = 0, ang = 0;
         for (int i = 1; i <= terms; i++) {
             double r = fib[i];
