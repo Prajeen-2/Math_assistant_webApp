@@ -134,7 +134,6 @@
     </div>
   </section>
 
-  <!-- Fibonacci Spiral Image -->
   <section class="card">
     <h2>Fibonacci Curve (Spiral)</h2>
     <label for="imgTerms">Number of terms (1–40)</label>
@@ -152,10 +151,8 @@
 </main>
 
 <script>
-  // All calls use relative URLs so this works on localhost and on Render.
   const base = '';
 
-  // Calculator: POST /api/calculate with a, b, op
   document.getElementById('calcBtn').addEventListener('click', async () => {
     const a = document.getElementById('calcA').value || '0';
     const b = document.getElementById('calcB').value || '0';
@@ -177,7 +174,7 @@
         return;
       }
       const data = await res.json();
-      // Just show the numeric result; no "A + B" formatting
+
       document.getElementById('calcResult').textContent =
         'Result: ' + data.result;
     } catch (err) {
@@ -186,13 +183,13 @@
     }
   });
 
-  // Fibonacci spiral image: GET /api/fibonacci-image?terms=&size=
+
   document.getElementById('imgBtn').addEventListener('click', () => {
     const terms = document.getElementById('imgTerms').value || '10';
     const size = document.getElementById('imgSize').value || '600';
     const url = `${base}/api/fibonacci-image?terms=${encodeURIComponent(terms)}&size=${encodeURIComponent(size)}`;
     const img = document.getElementById('spiralImg');
-    // cacheBust avoids old image being reused
+
     img.src = url + '&cacheBust=' + Date.now();
   });
 </script>
